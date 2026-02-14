@@ -282,10 +282,11 @@ class RatingsDashboard:
 
         # 1. Executive Summary Header
         total = len(results_data)
-        noks = [r for r in results_data if str(r.get('Verdict')).startswith('NOK')]
-        marginals = [r for r in results_data if str(r.get('Verdict')).startswith('Marginal')]
+        noks = [r for r in results_data if str(r.get('Verdict', '')).startswith('NOK')]
+        reviews = [r for r in results_data if str(r.get('Verdict', '')).startswith('User Review')]
+        marginals = [r for r in results_data if str(r.get('Verdict', '')).startswith('Marginal')]
         missing = [r for r in results_data if "Missing Data" in str(r.get('Verdict', ''))]
-        fails = [r for r in results_data if r.get('Verdict') == 'FAIL' or r.get('AuditVerdict') == 'FAIL']
+        fails = [r for r in results_data if r.get('AuditVerdict') == 'FAIL']
         
         # OK is total minus everything that isn't OK
         # We need to be careful with double counting (e.g. a component with FAIL audit and NOK verdict)
@@ -293,7 +294,14 @@ class RatingsDashboard:
         for i, r in enumerate(results_data):
             v = str(r.get('Verdict', ''))
             av = r.get('AuditVerdict', '')
-            if v.startswith('NOK') or v.startswith('Marginal') or "Missing Data" in v or v == 'FAIL' or av == 'FAIL' or av == 'WARNING':
+            if (
+                v.startswith('NOK')
+                or v.startswith('Marginal')
+                or v.startswith('User Review')
+                or "Missing Data" in v
+                or av == 'FAIL'
+                or av == 'WARNING'
+            ):
                 problematic_indices.add(i)
         
         ok_count = total - len(problematic_indices)
@@ -304,7 +312,10 @@ class RatingsDashboard:
         tk.Label(summary_frame, text="EXECUTIVE SUMMARY", font=('Segoe UI', 12, 'bold'), 
                  bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_accent']).pack(side='left')
         
-        stats_text = f"Total: {total} | NOK: {len(noks)} | Marginal: {len(marginals)} | Fail/Issue: {len(fails)} | Missing: {len(missing)} | OK: {ok_count}"
+        stats_text = (
+            f"Total: {total} | NOK: {len(noks) + len(reviews)} | Marginal: {len(marginals)} "
+            f"| Fail/Issue: {len(fails)} | Missing: {len(missing)} | OK: {ok_count}"
+        )
         tk.Label(summary_frame, text=stats_text, font=('Segoe UI', 11), 
                  bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary']).pack(side='right')
 
@@ -336,7 +347,17 @@ class RatingsDashboard:
         self.tree.tag_configure('WARNING', background='#ADD8E6', foreground='#000080')
         self.tree.tag_configure('UNKNOWN', background='#D3D3D3', foreground='black')
         
-        sorted_data = sorted(results_data, key=lambda x: {'NOK': 0, 'Marginal': 1, 'OK': 2}.get(x.get('Verdict', 'Unknown'), 3))
+        def _sort_key(item):
+            verdict = str(item.get('Verdict', ''))
+            if verdict.startswith('NOK') or verdict.startswith('User Review'):
+                return 0
+            if verdict.startswith('Marginal'):
+                return 1
+            if verdict.startswith('OK'):
+                return 2
+            return 3
+
+        sorted_data = sorted(results_data, key=_sort_key)
         for item in sorted_data:
             values = tuple(item.get(col, '-') for col in cols)
             # Tag logic: AuditVerdict takes priority over Verdict

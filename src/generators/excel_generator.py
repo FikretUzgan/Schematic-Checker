@@ -34,7 +34,11 @@ class ExcelGenerator:
         
         # Filter for Library Errors and Derating Errors
         library_errors = df[df['AuditReason'].str.contains('Library Error', case=False, na=False)]
-        derating_errors = df[df['Verdict'].str.startswith('NOK', na=False) | df['Verdict'].str.startswith('Marginal', na=False)]
+        derating_errors = df[
+            df['Verdict'].str.startswith('NOK', na=False)
+            | df['Verdict'].str.startswith('Marginal', na=False)
+            | df['Verdict'].str.startswith('User Review', na=False)
+        ]
 
         with pd.ExcelWriter(self.output_path, engine='openpyxl') as writer:
             # 1. Summary Sheet (first for visibility)
@@ -112,11 +116,14 @@ class ExcelGenerator:
         counts = df['Type'].value_counts().to_dict()
         verdicts = df['Verdict'].value_counts().to_dict()
         
+        review_mask = df['Verdict'].str.startswith('User Review', na=False)
+        nok_mask = df['Verdict'].str.startswith('NOK', na=False) | review_mask
+
         summary = [
             {'Category': 'Total Components Checked', 'Value': len(df)},
             {'Category': 'Verdict: OK', 'Value': len(df[df['Verdict'].str.startswith('OK', na=False)])},
             {'Category': 'Verdict: Marginal', 'Value': len(df[df['Verdict'].str.startswith('Marginal', na=False)])},
-            {'Category': 'Verdict: NOK', 'Value': len(df[df['Verdict'].str.startswith('NOK', na=False)])},
+            {'Category': 'Verdict: NOK', 'Value': len(df[nok_mask])},
             {'Category': '-- Errors Summary --', 'Value': ''},
             {'Category': 'Library Errors', 'Value': len(library_errors)},
             {'Category': 'Derating Errors', 'Value': len(derating_errors)},

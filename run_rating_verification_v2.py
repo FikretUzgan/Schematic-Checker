@@ -4,8 +4,17 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import re
 
-# Ensure src is in path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Ensure src is in path - works for both development and PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    application_path = sys._MEIPASS
+else:
+    # Running as script
+    application_path = os.path.dirname(__file__)
+
+src_path = os.path.join(application_path, 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 from parsers.netlist_parser import NetlistParser
 from analyzers.net_voltage_analyzer import NetVoltageAnalyzer
@@ -44,12 +53,17 @@ class RatingVerificationAppV2:
             self.netlist = NetlistParser(self.netlist_path)
             self.voltage_detector = NetVoltageAnalyzer()
             
-            db_path = os.path.join(os.path.dirname(__file__), 'data', 'component_database.json')
+            # Database path - works for both development and PyInstaller
+            if getattr(sys, 'frozen', False):
+                db_path = os.path.join(sys._MEIPASS, 'data', 'component_database.json')
+            else:
+                db_path = os.path.join(os.path.dirname(__file__), 'data', 'component_database.json')
             self.analyzer = PassiveRatingAnalyzer(db_path)
             
             dir_path = os.path.dirname(self.netlist_path)
-            self.excel_output = os.path.join(dir_path, "RatingVerification_V2_WorstCase.xlsx")
-            self.html_output = os.path.join(dir_path, "Executive_Summary_V2.html")
+            base_name = os.path.splitext(os.path.basename(self.netlist_path))[0]
+            self.excel_output = os.path.join(dir_path, f"{base_name}_Rating_Verification.xlsx")
+            self.html_output = os.path.join(dir_path, f"{base_name}_Executive_Summary.html")
             
             self.excel_gen = ExcelGenerator(self.excel_output)
             self.html_gen = HTMLExecutiveGenerator(self.html_output)

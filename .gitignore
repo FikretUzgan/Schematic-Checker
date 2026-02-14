@@ -24,3 +24,12 @@ altium_scripts/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# PyInstaller build artifacts
+build/
+dist/
+*.exe
+
+# Temporary files
+*.tmp
+*.bak

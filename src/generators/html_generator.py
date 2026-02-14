@@ -13,7 +13,9 @@ class HTMLExecutiveGenerator:
         # Fix: Catch variants like "NOK (Switching)" using startswith
         noks = [r for r in results if str(r.get('Verdict', '')).startswith('NOK')]
         marginals = [r for r in results if str(r.get('Verdict', '')).startswith('Marginal')]
+        reviews = [r for r in results if str(r.get('Verdict', '')).startswith('User Review')]
         oks = [r for r in results if str(r.get('Verdict', '')).startswith('OK')]
+        nok_total = len(noks) + len(reviews)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -42,6 +44,7 @@ class HTMLExecutiveGenerator:
         td {{ padding: 12px; border-bottom: 1px solid #333; }}
         .v-nok {{ color: #ff9999; font-weight: bold; }}
         .v-marginal {{ color: #ffff99; font-weight: bold; }}
+        .v-review {{ color: #ffbb33; font-weight: bold; }}
         .audit-fail {{ color: #ff4444; font-weight: bold; text-decoration: underline; }}
         .audit-warn {{ color: #ffbb33; font-style: italic; }}
         .banner {{ background: #2c3e50; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #34495e; }}
@@ -63,7 +66,7 @@ class HTMLExecutiveGenerator:
                 <span class="stat-label">Total Components</span>
             </div>
             <div class="stat-card nok">
-                <span class="stat-value" style="color: #e74c3c;">{len(noks)}</span>
+                <span class="stat-value" style="color: #e74c3c;">{nok_total}</span>
                 <span class="stat-label">NOK (Exceeded)</span>
             </div>
             <div class="stat-card marginal">
@@ -77,8 +80,8 @@ class HTMLExecutiveGenerator:
         </div>
 
         <h2>Critical Findings</h2>
-        {"<p>No critical issues found.</p>" if not noks and not marginals else ""}
-        {self._generate_findings_table(noks + marginals)}
+        {"<p>No critical issues found.</p>" if not noks and not marginals and not reviews else ""}
+        {self._generate_findings_table(noks + marginals + reviews)}
 
         <div style="margin-top: 50px; font-size: 0.8em; color: #555; text-align: center;">
             Auto_Altium Passive Verifier v1.0 | Standalone Executive Report
@@ -111,7 +114,12 @@ class HTMLExecutiveGenerator:
         """
         for item in findings:
             verdict_str = str(item.get('Verdict', ''))
-            v_class = "v-nok" if verdict_str.startswith('NOK') else "v-marginal"
+            if verdict_str.startswith('NOK'):
+                v_class = "v-nok"
+            elif verdict_str.startswith('Marginal'):
+                v_class = "v-marginal"
+            else:
+                v_class = "v-review"
             table_html += f"""
                 <tr>
                     <td>{item.get('Designator', '-')}</td>
