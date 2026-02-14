@@ -339,15 +339,23 @@ class RatingsDashboard:
         sorted_data = sorted(results_data, key=lambda x: {'NOK': 0, 'Marginal': 1, 'OK': 2}.get(x.get('Verdict', 'Unknown'), 3))
         for item in sorted_data:
             values = tuple(item.get(col, '-') for col in cols)
-            # Tag logic: combine verdict and audit tags
+            # Tag logic: AuditVerdict takes priority over Verdict
             tag = item.get('Verdict', '')
-            if "Missing Data" in tag:
-                tag = 'UNKNOWN'
-            elif item.get('AuditVerdict') == 'FAIL':
+            if item.get('AuditVerdict') == 'FAIL':
                 tag = 'FAIL'
             elif item.get('AuditVerdict') == 'WARNING' and not tag.startswith('NOK'):
                 tag = 'WARNING'
-            elif tag not in ['NOK', 'Marginal', 'OK']:
+            elif "Missing Data" in tag or tag.startswith('Unknown'):
+                tag = 'UNKNOWN'
+            elif tag.startswith('User Review'):
+                tag = 'WARNING'  # User Review Required -> yellow
+            elif tag.startswith('OK'):
+                tag = 'OK'  # Handles "OK" and "OK (Switching)"
+            elif tag.startswith('Marginal'):
+                tag = 'Marginal'
+            elif tag.startswith('NOK'):
+                tag = 'NOK'
+            else:
                 tag = 'UNKNOWN'
                 
             self.tree.insert('', 'end', values=values, tags=(tag,))

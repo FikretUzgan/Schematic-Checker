@@ -167,8 +167,13 @@ class RatingVerificationAppV2:
                     # ENHANCED V2.0 LOGIC:
                     if is_on_switchable_node and prefix in analysis_prefixes:
                         if applied_v > 0:
-                            res['Verdict'] = res['Verdict'] + " (Switching)"
-                            res['Reason'] = f"[Switching Path] {res.get('Reason', '')}"
+                            # If NOK on switching path, require user review; if OK, mark as switching
+                            if res['Verdict'].startswith('NOK'):
+                                res['Verdict'] = "User Review Required"
+                                res['Reason'] = f"[Switching Path - NOK] {res.get('Reason', '')} - Requires manual verification"
+                            else:
+                                res['Verdict'] = res['Verdict'] + " (Switching)"
+                                res['Reason'] = f"[Switching Path] {res.get('Reason', '')}"
                         elif res['Verdict'] == 'OK':
                             res['Reason'] = "(Switching Node found but NO supply V detected/confirmed)"
                         

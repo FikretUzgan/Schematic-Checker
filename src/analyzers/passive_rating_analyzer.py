@@ -94,6 +94,13 @@ class PassiveRatingAnalyzer:
         
         audit = self.audit_component(comp)
         
+        # Update AuditVerdict to include derating failures
+        final_audit_verdict = audit['AuditVerdict']
+        if status.startswith('NOK') or status.startswith('Unknown'):
+            final_audit_verdict = 'FAIL'
+        elif status == 'Marginal' and final_audit_verdict == 'OK':
+            final_audit_verdict = 'WARNING'
+        
         return {
             'Designator': comp['designator'],
             'Applied': f"{voltage:.2f}V",
@@ -101,7 +108,8 @@ class PassiveRatingAnalyzer:
             'Derated': f"{derated:.2f}V",
             'Verdict': status,
             'Reason': reason,
-            **audit
+            'AuditVerdict': final_audit_verdict,
+            'AuditReason': audit['AuditReason']
         }
 
     def analyze_resistor(self, comp: Dict, voltage: float) -> Dict:
@@ -145,7 +153,16 @@ class PassiveRatingAnalyzer:
             res_dict['Verdict'] = "Unknown (Missing Data)"
             
         audit = self.audit_component(comp)
-        res_dict.update(audit)
+        
+        # Update AuditVerdict to include derating failures
+        final_audit_verdict = audit['AuditVerdict']
+        if res_dict['Verdict'].startswith('NOK') or res_dict['Verdict'].startswith('Unknown'):
+            final_audit_verdict = 'FAIL'
+        elif res_dict['Verdict'] == 'Marginal' and final_audit_verdict == 'OK':
+            final_audit_verdict = 'WARNING'
+        
+        res_dict['AuditVerdict'] = final_audit_verdict
+        res_dict['AuditReason'] = audit['AuditReason']
         return res_dict
 
     def analyze_inductor(self, comp: Dict, current: float) -> Dict:
@@ -170,6 +187,13 @@ class PassiveRatingAnalyzer:
             
         audit = self.audit_component(comp)
         
+        # Update AuditVerdict to include derating failures
+        final_audit_verdict = audit['AuditVerdict']
+        if status.startswith('NOK') or status.startswith('Unknown'):
+            final_audit_verdict = 'FAIL'
+        elif status == 'Marginal' and final_audit_verdict == 'OK':
+            final_audit_verdict = 'WARNING'
+        
         return {
             'Designator': comp['designator'],
             'Applied': f"{current:.2f}A",
@@ -177,7 +201,8 @@ class PassiveRatingAnalyzer:
             'Derated': f"{derated:.2f}A",
             'Verdict': status,
             'Reason': reason,
-            **audit
+            'AuditVerdict': final_audit_verdict,
+            'AuditReason': audit['AuditReason']
         }
 
     def _extract_current_rating(self, comp: Dict) -> float:
