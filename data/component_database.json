@@ -1,0 +1,40 @@
+{
+  "settings": {
+    "marginal_threshold_percentage": 80,
+    "verdict_logic": {
+      "OK": "< MarginalThreshold",
+      "Marginal": ">= MarginalThreshold and <= 100%",
+      "NOK": "> 100%"
+    }
+  },
+  "capacitors": {
+    "derating_factors": {
+      "MLCC": 0.8,
+      "Electrolytic": 0.8,
+      "Tantalum": 0.8,
+      "Organic": 0.9,
+      "Film": 0.7,
+      "Hybrid": 0.8,
+      "Default": 0.8
+    }
+  },
+  "resistors": {
+    "footprint_power_ratings_watts": {
+      "0201": 0.05,
+      "0402": 0.063,
+      "0603": 0.1,
+      "0805": 0.125,
+      "1206": 0.25,
+      "1210": 0.5,
+      "2010": 0.75,
+      "2512": 1.0
+    },
+    "default_derating_factor": 0.8
+  },
+  "inductors": {
+    "default_derating_factor": 0.7
+  },
+  "discretes": {
+    "default_derating_factor": 0.75
+  }
+}

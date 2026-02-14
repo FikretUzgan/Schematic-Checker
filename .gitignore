@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Excel and other generated data
+*.xlsx
+*.xlsx#
+*.csv
+*.html
+*.log
+test_data/
+altium_scripts/
+
+# Altium specific netlists if they are large/proprietary
+# *.NET
+
+# VS Code / OS specific
+.vscode/
+.DS_Store
+Thumbs.db
