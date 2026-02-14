@@ -630,30 +630,120 @@ def get_sort_key(verdict_string):
 
 ## 12. FUTURE ENHANCEMENTS
 
-### 12.1 Planned Features (Not Yet Implemented)
+### 12.1 Approved for V2.0 Development
+**Status:** Approved - Implementation pending
 
-#### Phase 2: Current Analysis
+#### Enhancement 1: Save/Load Voltage Configuration
+**Priority:** High  
+**Description:** Persist confirmed voltage rails to JSON file per project  
+**Benefit:** 90% time savings for repeat analyses - users don't need to re-confirm voltages  
+**Implementation:**
+```python
+# After voltage confirmation:
+save_voltage_config(netlist_path, confirmed_voltages)
+# Next run:
+cached_voltages = load_voltage_config(netlist_path)
+# Offer "Use saved voltages?" dialog
+```
+
+#### Enhancement 6: PDF Report Generation
+**Priority:** High  
+**Description:** Generate professional PDF reports for archival and customer delivery  
+**Benefit:** Better suited for audits and certifications than Excel/HTML  
+**Implementation:** Use `weasyprint` or `reportlab` library
+
+#### Enhancement 7: Interactive Voltage Map Visualization
+**Priority:** Medium  
+**Description:** HTML network graph showing voltage propagation through design  
+**Benefit:** Visual debugging of voltage distribution  
+**Technology:** `vis.js` or `D3.js` for interactive network diagrams
+
+#### Enhancement 8: Comparison Mode (Design Revisions)
+**Priority:** High  
+**Description:** Compare two netlist versions and show differences  
+**Output:**
+- New components added
+- Removed components  
+- Changed verdicts (OK→NOK, etc.)
+- Delta in failure counts  
+**CLI:** `python run_v2.py --compare RevA.NET RevB.NET`
+
+#### Enhancement 9: Progress Bar for Large Designs
+**Priority:** Low  
+**Description:** Add `tqdm` progress bar for 1000+ component designs  
+**Benefit:** User feedback during long-running analyses
+
+#### Enhancement 11: Statistics Dashboard Banner
+**Priority:** Low  
+**Description:** Add summary banner to Excel Verification Details sheet  
+**Format:**
+```
+┌─────────────────────────────────────────────┐
+│ 🔴 FAILED: 12  🟡 WARNING: 5  🟢 PASSED: 483 │
+└─────────────────────────────────────────────┘
+```
+
+#### Enhancement 18: GUI Tooltips
+**Priority:** Medium  
+**Description:** Hover tooltips explaining technical terms  
+**Examples:**
+- "Derated" → "Rating after applying 80% derating factor for safety margin"
+- "Switching Path" → "Circuit controlled by transistor; may see transient overstress"
+
+#### Enhancement 20: Recent Files List
+**Priority:** Medium  
+**Description:** "Recently Analyzed" dropdown with last 5 netlist files  
+**Benefit:** Faster workflow for engineers working on multiple projects
+
+#### Enhancement 23: Custom Report Templates
+**Priority:** Low  
+**Description:** Jinja2 templates for company-specific HTML formatting  
+**Use Case:** Company logos, custom headers, certification compliance
+
+### 12.2 Under Review
+**Status:** Pending team discussion
+
+#### Enhancement 5: Component Exemption List
+**Description:** Allow users to mark specific components as exempt from failures  
+**Use Case:** TVS diodes, pulse-rated components, intentional overstress  
+**Concerns:** May mask real issues if misused  
+**Decision:** Pending collaboration with colleagues
+
+### 12.3 Future Phases (V3.0+)
+
+#### Phase 2: Command-Line Interface (CLI)
+**Priority:** Medium  
+**Description:** Enable automation and batch processing  
+**Examples:**
+```bash
+python run_rating_verification_v2.py --netlist path.NET --auto-confirm --output results/
+python run_rating_verification_v2.py --batch folder/*.NET --config voltages.json
+```
+**Benefit:** CI/CD integration, automated regression testing in build pipelines
+
+#### Phase 3: Current Analysis (Real Implementation)
 - Parse PCB layout to extract trace widths
 - Calculate trace resistance and voltage drop
 - Determine actual current through inductors
 - Verify connector current ratings
+- Import simulation results (LTspice, PSPICE)
 
-#### Phase 3: Thermal Analysis
+#### Phase 4: Thermal Analysis
 - Import thermal simulation results
 - Adjust derating based on ambient temperature
 - Flag components in hot zones
 
-#### Phase 4: Altium Integration
+#### Phase 5: Altium Integration
 - Translate Python code to DelphiScript
 - Integrate with Altium API for direct netlist access
 - In-PCB annotations for failed components
 - One-click verification from Altium menu
 
-#### Phase 5: Advanced Features
-- Database lookup for actual component datasheets
+#### Phase 6: Advanced Features
+- Database lookup for actual component datasheets (Octopart API)
 - AI-powered component recommendation (suggest higher-rated alternatives)
-- Historical tracking (compare current vs. previous design revisions)
-- Multi-project batch analysis
+- Email notifications for automated builds
+- Trend analysis over time (failures dashboard)
 
 ---
 
@@ -737,7 +827,8 @@ python run_rating_verification_v2.py
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-02-14 | Auto_Altium Team | Initial specification document |
+| 1.0 | 2026-02-14 | Auto_Altium Team | Initial specification document - V1.0 stable release |
+| 1.1 | 2026-02-14 | Auto_Altium Team | Updated Future Enhancements with approved V2.0 features (1, 6, 7, 8, 9, 11, 18, 20, 23), CLI planned for future, Enhancement 5 under review |
 
 ---
 
