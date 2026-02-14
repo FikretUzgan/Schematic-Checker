@@ -50,6 +50,11 @@ class RatingVerificationAppV2:
             self.netlist_path = landing.selected_path
             print(f"[Debug] Target netlist: {self.netlist_path}")
             
+            if not os.path.exists(self.netlist_path):
+                print(f"[Error] Netlist file does not exist: {self.netlist_path}")
+                messagebox.showerror("File Not Found", f"The selected netlist file does not exist:\n{self.netlist_path}")
+                sys.exit(1)
+            
             self.netlist = NetlistParser(self.netlist_path)
             self.voltage_detector = NetVoltageAnalyzer()
             
@@ -68,8 +73,9 @@ class RatingVerificationAppV2:
             self.excel_gen = ExcelGenerator(self.excel_output)
             self.html_gen = HTMLExecutiveGenerator(self.html_output)
             
-            # Now we can withdraw root if we want, but usually it's better to keep it
-            self.root.withdraw()
+            # Keep root visible but iconified (minimized) instead of withdrawn
+            # This ensures child dialogs display properly
+            self.root.iconify()
             
         except Exception as e:
             print(f"[Critical Error during Init] {e}")
@@ -96,12 +102,14 @@ class RatingVerificationAppV2:
         return switchable_gnd_nets
 
     def run(self):
+        print("[Debug] run() method called - starting analysis...")
         try:
             print(f"\n--- Starting V2.0 Worst-Case Analysis ---\nTarget: {os.path.basename(self.netlist_path)}")
             
             # [Step 1] Parsing
             self.netlist.parse()
             net_names = list(self.netlist.nets.keys())
+            print(f"[Step 1] Parsed netlist: {len(self.netlist.components)} components, {len(net_names)} nets")
             
             # [Step 2] GND & Transistor Bridge Detection
             gnd_nets = self.identify_gnd_nets(net_names)
@@ -113,7 +121,7 @@ class RatingVerificationAppV2:
             candidates = self.voltage_detector.detect_candidates(net_names)
             if candidates:
                 print(f"[Step 3] {len(candidates)} potential voltage points detected. Opening confirmation UI...")
-                confirm_gui = VoltageConfirmationList(self.root, candidates)
+                confirm_gui = VoltageConfirmationList(self.root, candidates, available_nets=net_names)
                 self.root.wait_window(confirm_gui.top)
                 confirmed = confirm_gui.results
                 for net, info in confirmed.items():
@@ -123,6 +131,7 @@ class RatingVerificationAppV2:
             # [Step 4] Worst-Case Analysis
             print("[Step 4] Running Worst-Case Power Analysis...")
             confirmed_voltages = self.voltage_detector.get_analysis_state()
+            print(f"  - Confirmed voltages: {confirmed_voltages}")
             results = []
             
             # Prefixes from designator_mapping.md
@@ -195,6 +204,8 @@ class RatingVerificationAppV2:
                 except Exception as e:
                     print(f"  [Warning] Skipping {des}: {e}")
 
+            print(f"[Step 4] Analysis complete: {len(results)} components analyzed")
+
             # [Step 5] Pre-test Summary
             print("\n--- PRE-TEST SUMMARY ---")
             lib_errors = [r for r in results if r.get('AuditVerdict') == 'FAIL']
@@ -213,17 +224,25 @@ class RatingVerificationAppV2:
             # [Step 5] Reporting
             if results:
                 print(f"[Step 5] Generating Reports...")
+                print(f"  - Excel: {self.excel_output}")
+                print(f"  - HTML: {self.html_output}")
                 self.excel_gen.generate(results)
                 self.html_gen.generate(results)
+                print(f"  ✓ Reports generated successfully!")
                 
                 dashboard = RatingsDashboard(self.root, results)
                 self.root.wait_window(dashboard.top)
+            else:
+                print("[Warning] No results to report - no components were analyzed")
+                messagebox.showwarning("No Results", "No components were analyzed. Please check the netlist file.")
                 
         except Exception as e:
+            print(f"[Critical Error in run()] {e}")
             messagebox.showerror("V2.0 Critical Error", str(e))
             import traceback
             traceback.print_exc()
         finally:
+            print("[Debug] run() method completed")
             if self.root.winfo_exists():
                 self.root.destroy()
 

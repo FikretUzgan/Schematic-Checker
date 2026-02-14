@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from utils.tk_net_selector import show_net_selector
 
 # --- GUI THEME CONFIGURATION ---
 # You can change these values to customize the look and feel
@@ -40,13 +41,21 @@ THEME_CONFIG = {
 
 class VoltageConfirmationList:
     """A sleek Dark Mode GUI with centralized theme config."""
-    def __init__(self, parent, candidates):
+    def __init__(self, parent, candidates, available_nets=None):
         self.results = {}
+        self.available_nets = available_nets or []
+        self.parent = parent
         self.top = tk.Toplevel(parent)
         self.top.title("Confirm Detected Voltage Points")
         self.top.geometry("700x550")
         self.top.configure(bg=THEME_CONFIG['bg_main'])
         self.top.grab_set()
+        
+        # Force window to appear on top
+        self.top.lift()
+        self.top.attributes('-topmost', True)
+        self.top.after(100, lambda: self.top.attributes('-topmost', False))
+        self.top.focus_force()
         
         # Center the window
         self.top.update_idletasks()
@@ -94,65 +103,104 @@ class VoltageConfirmationList:
 
         self.rows = []
         for net, val in candidates.items():
-            # Separator Line
-            tk.Frame(self.scrollable_frame, height=1, bg=THEME_CONFIG['separator_color']).pack(fill='x')
-
-            row_frame = tk.Frame(self.scrollable_frame, pady=4, bg=THEME_CONFIG['bg_card'])
-            row_frame.pack(fill='x')
-            
-            # Net Name
-            name_label = tk.Label(row_frame, text=net, width=35, anchor='w', font=THEME_CONFIG['font_table'],
-                                 bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'])
-            name_label.pack(side='left', padx=2)
-            
-            # Voltage Input
-            original_val = str(val)
-            entry_var = tk.StringVar(value=original_val)
-            entry = tk.Entry(row_frame, width=8, textvariable=entry_var, font=THEME_CONFIG['font_mono'], 
-                            bg=THEME_CONFIG['bg_input'], fg=THEME_CONFIG['text_primary'], insertbackground='white',
-                            borderwidth=1, relief='flat', justify='center')
-            entry.pack(side='left', padx=5)
-            
-            # Decision
-            decision_var = tk.StringVar(value="confirm")
-            ctrl_frame = tk.Frame(row_frame, bg=THEME_CONFIG['bg_card'])
-            ctrl_frame.pack(side='left', padx=10)
-            
-            rb_yes = tk.Radiobutton(ctrl_frame, text="Confirm", variable=decision_var, value="confirm", 
-                                    font=THEME_CONFIG['font_sub'], bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'],
-                                    selectcolor="#333", activebackground=THEME_CONFIG['bg_card'],
-                                    activeforeground="white")
-            rb_yes.pack(side='left')
-            
-            rb_no = tk.Radiobutton(ctrl_frame, text="Exclude", variable=decision_var, value="exclude", 
-                                   font=THEME_CONFIG['font_sub'], bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'],
-                                   selectcolor="#333", activebackground=THEME_CONFIG['bg_card'],
-                                   activeforeground="white")
-            rb_no.pack(side='left', padx=5)
-
-            row_data = {
-                'row_frame': row_frame,
-                'name_label': name_label,
-                'ctrl_frame': ctrl_frame,
-                'entry': entry,
-                'entry_var': entry_var,
-                'decision_var': decision_var,
-                'original_val': original_val,
-                'rbs': [rb_yes, rb_no],
-                'net': net
-            }
-            
-            entry_var.trace_add("write", lambda *args, rd=row_data: self.update_row_color(rd))
-            decision_var.trace_add("write", lambda *args, rd=row_data: self.update_row_color(rd))
-            
-            self.update_row_color(row_data)
-            self.rows.append(row_data)
+            self._add_row_to_list(net, val)
 
         btn_container = tk.Frame(self.top, bg=THEME_CONFIG['bg_main'], pady=15)
         btn_container.pack(fill='x')
+        
+        tk.Button(btn_container, text="Add Net Voltage", bg="#1a5a7a", fg="white", 
+                  activebackground="#2a7aaa", font=THEME_CONFIG['font_table'], 
+                  padx=20, pady=6, relief='flat', borderwidth=1, 
+                  command=self._on_add_net).pack(side='left', padx=10)
+        
         tk.Button(btn_container, text="Verify Ratings", bg="#2a2a2a", fg="white", 
                   activebackground="#444", font=THEME_CONFIG['font_table'], 
-                  padx=25, pady=6, relief='flat', borderwidth=1, command=self.on_confirm).pack()
+                  padx=25, pady=6, relief='flat', borderwidth=1, 
+                  command=self.on_confirm).pack(side='left', padx=10)
+    
+    def _add_row_to_list(self, net, val):
+        """Add a single row to the voltage list."""
+        # Separator Line
+        tk.Frame(self.scrollable_frame, height=1, bg=THEME_CONFIG['separator_color']).pack(fill='x')
+
+        row_frame = tk.Frame(self.scrollable_frame, pady=4, bg=THEME_CONFIG['bg_card'])
+        row_frame.pack(fill='x')
+        
+        # Net Name
+        name_label = tk.Label(row_frame, text=net, width=35, anchor='w', font=THEME_CONFIG['font_table'],
+                             bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'])
+        name_label.pack(side='left', padx=2)
+        
+        # Voltage Input
+        original_val = str(val)
+        entry_var = tk.StringVar(value=original_val)
+        entry = tk.Entry(row_frame, width=8, textvariable=entry_var, font=THEME_CONFIG['font_mono'], 
+                        bg=THEME_CONFIG['bg_input'], fg=THEME_CONFIG['text_primary'], insertbackground='white',
+                        borderwidth=1, relief='flat', justify='center')
+        entry.pack(side='left', padx=5)
+        
+        # Decision
+        decision_var = tk.StringVar(value="confirm")
+        ctrl_frame = tk.Frame(row_frame, bg=THEME_CONFIG['bg_card'])
+        ctrl_frame.pack(side='left', padx=10)
+        
+        rb_yes = tk.Radiobutton(ctrl_frame, text="Confirm", variable=decision_var, value="confirm", 
+                                font=THEME_CONFIG['font_sub'], bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'],
+                                selectcolor="#333", activebackground=THEME_CONFIG['bg_card'],
+                                activeforeground="white")
+        rb_yes.pack(side='left')
+        
+        rb_no = tk.Radiobutton(ctrl_frame, text="Exclude", variable=decision_var, value="exclude", 
+                               font=THEME_CONFIG['font_sub'], bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary'],
+                               selectcolor="#333", activebackground=THEME_CONFIG['bg_card'],
+                               activeforeground="white")
+        rb_no.pack(side='left', padx=5)
+
+        row_data = {
+            'row_frame': row_frame,
+            'name_label': name_label,
+            'ctrl_frame': ctrl_frame,
+            'entry': entry,
+            'entry_var': entry_var,
+            'decision_var': decision_var,
+            'original_val': original_val,
+            'rbs': [rb_yes, rb_no],
+            'net': net
+        }
+        
+        entry_var.trace_add("write", lambda *args, rd=row_data: self.update_row_color(rd))
+        decision_var.trace_add("write", lambda *args, rd=row_data: self.update_row_color(rd))
+        
+        self.update_row_color(row_data)
+        self.rows.append(row_data)
+    
+    def _on_add_net(self):
+        """Open net selector to add a new net voltage manually."""
+        if not self.available_nets:
+            messagebox.showwarning("No Nets Available", 
+                                 "No nets found in the netlist. Load a netlist file first.")
+            return
+        
+        # Get list of nets already in the confirmation table
+        existing_nets = {row['net'] for row in self.rows}
+        
+        # Filter to show only nets not yet in the table
+        selectable_nets = [net for net in self.available_nets if net not in existing_nets]
+        
+        if not selectable_nets:
+            messagebox.showinfo("All Nets Added", 
+                              "All nets from the netlist are already in the confirmation table.")
+            return
+        
+        result = show_net_selector(self.top, selectable_nets)
+        
+        if result:
+            # result is now a list of (net_name, voltage) tuples
+            for net_name, voltage in result:
+                # Add each selected net as a new row
+                self._add_row_to_list(net_name, voltage)
+            # Redraw the scrollable frame
+            self.scrollable_frame.update_idletasks()
 
     def update_row_color(self, row):
         decision = row['decision_var'].get()
@@ -247,8 +295,13 @@ class NetlistSelectionPage:
             self.start_btn.configure(state='disabled', bg='#555')
 
     def browse_file(self):
+        # Set initial directory to the current working directory or workspace
+        initial_dir = os.getcwd()
+        
         path = filedialog.askopenfilename(
+            parent=self.top,
             title="Select Altium Netlist (.NET)",
+            initialdir=initial_dir,
             filetypes=[("Netlist files", "*.NET"), ("All files", "*.*")]
         )
         if path:
@@ -271,6 +324,12 @@ class RatingsDashboard:
         self.top.title("Verification Results Dashboard")
         self.top.geometry("1100x700")
         self.top.configure(bg=THEME_CONFIG['bg_main'])
+        
+        # Force window to appear on top
+        self.top.lift()
+        self.top.attributes('-topmost', True)
+        self.top.after(100, lambda: self.top.attributes('-topmost', False))
+        self.top.focus_force()
         
         # Center the window
         self.top.update_idletasks()
