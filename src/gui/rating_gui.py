@@ -195,18 +195,24 @@ class NetlistSelectionPage:
         self.confirmed = False
         
         self.top = tk.Toplevel(parent)
+        print(f"[Debug] selection_page.top created. Title: {self.top.title()}")
         self.top.title("Auto_Altium | Rating Verification V2.0")
         self.top.geometry("600x400")
         self.top.configure(bg=THEME_CONFIG['bg_main'])
         self.top.resizable(False, False)
         
-        # Center the window
-        self.top.update_idletasks()
-        width = 600
-        height = 400
-        x = (self.top.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.top.winfo_screenheight() // 2) - (height // 2)
-        self.top.geometry(f'{width}x{height}+{x}+{y}')
+        # Simplified visibility
+        self.top.geometry("600x400+50+50")
+        self.top.lift()
+        self.top.attributes('-topmost', True)
+        self.top.attributes('-topmost', False)
+        
+        # self.top.update_idletasks()
+        # width = 600
+        # height = 400
+        # x = (self.top.winfo_screenwidth() // 2) - (width // 2)
+        # y = (self.top.winfo_screenheight() // 2) - (height // 2)
+        # self.top.geometry(f'{width}x{height}+{x}+{y}')
 
         # Background Design (Subtle gradient effect simulated with frames)
         main_frame = tk.Frame(self.top, bg=THEME_CONFIG['bg_card'], highlightbackground=THEME_CONFIG['text_accent'], highlightthickness=1)
@@ -276,9 +282,21 @@ class RatingsDashboard:
 
         # 1. Executive Summary Header
         total = len(results_data)
-        noks = len([r for r in results_data if r.get('Verdict') == 'NOK'])
-        marginals = len([r for r in results_data if r.get('Verdict') == 'Marginal'])
-        missing = len([r for r in results_data if "Missing Data" in r.get('Verdict', '')])
+        noks = [r for r in results_data if str(r.get('Verdict')).startswith('NOK')]
+        marginals = [r for r in results_data if str(r.get('Verdict')).startswith('Marginal')]
+        missing = [r for r in results_data if "Missing Data" in str(r.get('Verdict', ''))]
+        fails = [r for r in results_data if r.get('Verdict') == 'FAIL' or r.get('AuditVerdict') == 'FAIL']
+        
+        # OK is total minus everything that isn't OK
+        # We need to be careful with double counting (e.g. a component with FAIL audit and NOK verdict)
+        problematic_indices = set()
+        for i, r in enumerate(results_data):
+            v = str(r.get('Verdict', ''))
+            av = r.get('AuditVerdict', '')
+            if v.startswith('NOK') or v.startswith('Marginal') or "Missing Data" in v or v == 'FAIL' or av == 'FAIL' or av == 'WARNING':
+                problematic_indices.add(i)
+        
+        ok_count = total - len(problematic_indices)
         
         summary_frame = tk.Frame(self.top, bg=THEME_CONFIG['bg_card'], padx=20, pady=15)
         summary_frame.pack(fill='x', padx=20, pady=10)
@@ -286,7 +304,7 @@ class RatingsDashboard:
         tk.Label(summary_frame, text="EXECUTIVE SUMMARY", font=('Segoe UI', 12, 'bold'), 
                  bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_accent']).pack(side='left')
         
-        stats_text = f"Total: {total} | NOK: {noks} | Marginal: {marginals} | Missing Rating: {missing} | OK: {total - noks - marginals - missing}"
+        stats_text = f"Total: {total} | NOK: {len(noks)} | Marginal: {len(marginals)} | Fail/Issue: {len(fails)} | Missing: {len(missing)} | OK: {ok_count}"
         tk.Label(summary_frame, text=stats_text, font=('Segoe UI', 11), 
                  bg=THEME_CONFIG['bg_card'], fg=THEME_CONFIG['text_primary']).pack(side='right')
 
@@ -331,6 +349,8 @@ class RatingsDashboard:
                 tag = 'WARNING'
             elif tag not in ['NOK', 'Marginal', 'OK']:
                 tag = 'UNKNOWN'
+                
+            self.tree.insert('', 'end', values=values, tags=(tag,))
             
         self.tree.pack(side='left', expand=True, fill='both')
         scrollbar.pack(side='right', fill='y')

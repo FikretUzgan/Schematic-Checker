@@ -35,7 +35,7 @@ class NetVoltageAnalyzer:
         # Priority 1: Numeric patterns like 3V3, 5V, 1.8V, 12V, or even just _3.3_
         num_pattern = re.compile(r'(\d+[Vv]\d+|\d+\.\d+[Vv]?|\d+[Vv])', re.IGNORECASE)
         # Priority 2: Keywords like VCC, VDD, VBUS, +5V, +12V
-        main_pattern = re.compile(r'(VCC|VDD|VBUS|VSAFE|PWR|DCDC|REG|LDO|\+\d+V)', re.IGNORECASE)
+        main_pattern = re.compile(r'(VCC|VDD|VBUS|VSAFE|PWR|DCDC|REG|LDO|VOUT|\+\d+V)', re.IGNORECASE)
         
         for name in net_names:
             if name in self.excluded_nets or name in self.current_session_excluded:

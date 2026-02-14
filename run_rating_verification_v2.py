@@ -18,29 +18,50 @@ class RatingVerificationAppV2:
     """Version 2.0 with Switching Path Analysis and Worst-Case Detection."""
     
     def __init__(self, netlist_path=None):
-        self.root = tk.Tk()
-        self.root.withdraw()
-        
-        # [Step 1] Landing Page for File Selection
-        landing = NetlistSelectionPage(self.root, initial_path=netlist_path)
-        self.root.wait_window(landing.top)
-        
-        if not landing.confirmed:
-            sys.exit(0)
+        try:
+            print("[Debug] Initializing RatingVerificationAppV2...")
+            self.root = tk.Tk()
+            self.root.update()
             
-        self.netlist_path = landing.selected_path
-        self.netlist = NetlistParser(self.netlist_path)
-        self.voltage_detector = NetVoltageAnalyzer()
-        
-        db_path = os.path.join(os.path.dirname(__file__), 'data', 'component_database.json')
-        self.analyzer = PassiveRatingAnalyzer(db_path)
-        
-        dir_path = os.path.dirname(self.netlist_path)
-        self.excel_output = os.path.join(dir_path, "RatingVerification_V2_WorstCase.xlsx")
-        self.html_output = os.path.join(dir_path, "Executive_Summary_V2.html")
-        
-        self.excel_gen = ExcelGenerator(self.excel_output)
-        self.html_gen = HTMLExecutiveGenerator(self.html_output)
+            # [Step 1] Landing Page for File Selection
+            print("[Debug] Opening NetlistSelectionPage...")
+            landing = NetlistSelectionPage(self.root, initial_path=netlist_path)
+            
+            # Force focus and visibility
+            landing.top.lift()
+            landing.top.focus_force()
+            
+            self.root.wait_window(landing.top)
+            print("[Debug] Selection page closed.")
+            
+            if not landing.confirmed:
+                print("[Debug] Selection cancelled by user.")
+                sys.exit(0)
+                
+            self.netlist_path = landing.selected_path
+            print(f"[Debug] Target netlist: {self.netlist_path}")
+            
+            self.netlist = NetlistParser(self.netlist_path)
+            self.voltage_detector = NetVoltageAnalyzer()
+            
+            db_path = os.path.join(os.path.dirname(__file__), 'data', 'component_database.json')
+            self.analyzer = PassiveRatingAnalyzer(db_path)
+            
+            dir_path = os.path.dirname(self.netlist_path)
+            self.excel_output = os.path.join(dir_path, "RatingVerification_V2_WorstCase.xlsx")
+            self.html_output = os.path.join(dir_path, "Executive_Summary_V2.html")
+            
+            self.excel_gen = ExcelGenerator(self.excel_output)
+            self.html_gen = HTMLExecutiveGenerator(self.html_output)
+            
+            # Now we can withdraw root if we want, but usually it's better to keep it
+            self.root.withdraw()
+            
+        except Exception as e:
+            print(f"[Critical Error during Init] {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
     def identify_gnd_nets(self, net_names):
         """Standardizes identification of Ground nets."""
